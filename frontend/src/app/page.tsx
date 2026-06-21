@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const totalActive = campaigns.filter(c => c.status === "active").length;
 
   return (
-    <div className="p-8 min-h-screen">
+    <div className="page-wrapper-full" style={{ paddingTop: "48px" }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8 slide-up">
         <div>
@@ -48,15 +48,15 @@ export default function DashboardPage() {
           { label: "Processing", value: "—", icon: Clock, color: "#f59e0b" },
           { label: "Candidates Found", value: "—", icon: Users, color: "#10b981" },
         ].map((s) => (
-          <div key={s.label} className="stat-card">
+          <div key={s.label} className="stat-card group" style={{ borderTop: `2px solid ${s.color}40` }}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[12px] text-white/40 font-medium">{s.label}</span>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: `${s.color}20` }}>
-                <s.icon size={15} style={{ color: s.color }} />
+              <span className="text-[12px] text-white/40 font-medium group-hover:text-white/60 transition-colors">{s.label}</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                style={{ background: `${s.color}15`, border: `1px solid ${s.color}25` }}>
+                <s.icon size={14} style={{ color: s.color }} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-white">{s.value}</div>
+            <div className="text-2xl font-bold text-white tracking-tight">{s.value}</div>
           </div>
         ))}
       </div>
@@ -105,33 +105,39 @@ function CampaignCard({ campaign, index }: { campaign: Campaign; index: number }
       style={{ animationDelay: `${0.05 * index}s` }}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${campaign.status === "active" ? "bg-emerald-400" : "bg-white/20"}`} />
-            <span className="text-[11px] text-white/30 uppercase tracking-widest font-medium">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+              campaign.status === "active"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                : "bg-white/5 text-white/45 border border-white/10"
+            }`}>
+              <span className={`w-1 h-1 rounded-full ${campaign.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
               {campaign.status}
             </span>
           </div>
-          <h3 className="font-semibold text-white text-[15px] truncate group-hover:text-violet-300 transition-colors">
+          <h3 className="font-bold text-white text-[16px] tracking-tight truncate group-hover:text-violet-300 transition-colors">
             {campaign.title}
           </h3>
-          <p className="text-[13px] text-white/40 mt-0.5">{campaign.role}</p>
+          <p className="text-[13px] text-white/40 mt-0.5 font-medium">{campaign.role}</p>
         </div>
-        <ArrowRight size={16} className="text-white/20 group-hover:text-violet-400 group-hover:translate-x-1 transition-all mt-1 flex-shrink-0" />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/3 border border-white/5 group-hover:border-violet-500/30 group-hover:bg-violet-500/10 transition-all flex-shrink-0">
+          <ArrowRight size={14} className="text-white/30 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all" />
+        </div>
       </div>
 
       {/* Skills */}
       {campaign.required_skills?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="flex flex-wrap gap-1.5 mb-5">
           {campaign.required_skills.slice(0, 4).map(skill => (
             <span key={skill}
-              className="text-[11px] px-2 py-0.5 rounded-md text-white/50"
-              style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
+              className="text-[11px] font-medium px-2.5 py-0.5 rounded-md text-violet-300 transition-colors"
+              style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.18)" }}>
               {skill}
             </span>
           ))}
           {campaign.required_skills.length > 4 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-md text-white/30"
-              style={{ background: "rgba(255,255,255,0.04)" }}>
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-md text-white/40"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               +{campaign.required_skills.length - 4}
             </span>
           )}
@@ -139,10 +145,10 @@ function CampaignCard({ campaign, index }: { campaign: Campaign; index: number }
       )}
 
       <div className="flex items-center justify-between pt-4 border-t border-white/5">
-        <span className="text-[12px] text-white/25">
-          {new Date(campaign.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        <span className="text-[11px] text-white/30 font-medium">
+          Created {new Date(campaign.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
         </span>
-        <span className="flex items-center gap-1.5 text-[12px] text-violet-400">
+        <span className="flex items-center gap-1 text-[12px] font-semibold text-violet-400 group-hover:text-violet-300 transition-colors">
           <Upload size={12} />
           Upload Resumes
         </span>

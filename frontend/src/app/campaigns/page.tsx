@@ -31,7 +31,7 @@ export default function CampaignsPage() {
   );
 
   return (
-    <div className="p-8 min-h-screen">
+    <div className="page-wrapper-full" style={{ paddingTop: "48px" }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8 slide-up">
         <div>

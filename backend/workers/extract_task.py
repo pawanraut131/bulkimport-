@@ -68,6 +68,7 @@ def extract_resume(self, resume_id: str):
     log = logger.bind(task="extract_resume", resume_id=resume_id)
     log.info("task_started")
 
+    # Capture scalar values inside session scope to avoid DetachedInstanceError
     with SyncSession() as db:
         resume = db.query(Resume).filter(Resume.id == uuid.UUID(resume_id)).first()
         if not resume:
@@ -78,12 +79,16 @@ def extract_resume(self, resume_id: str):
         resume.celery_task_id = self.request.id
         db.commit()
 
+        # Read all needed values NOW, inside the session, before it closes
+        original_filename = resume.original_filename
+        storage_path = resume.storage_path
+
     try:
-        _publish_sse_event(resume_id, "extracting", {"filename": resume.original_filename})
+        _publish_sse_event(resume_id, "extracting", {"filename": original_filename})
 
         # Download from MinIO
-        log.info("downloading_pdf", path=resume.storage_path)
-        pdf_bytes = storage.download_file(resume.storage_path)
+        log.info("downloading_pdf", path=storage_path)
+        pdf_bytes = storage.download_file(storage_path)
 
         if not is_valid_pdf(pdf_bytes):
             raise ValueError("Downloaded file is not a valid PDF")
@@ -128,6 +133,16 @@ def extract_resume(self, resume_id: str):
 
     except Exception as exc:
         log.error("extraction_failed", error=str(exc))
+        if self.request.retries >= self.max_retries:
+            # Max retries hit — mark as failed so it doesn't stay stuck in "extracting"
+            with SyncSession() as db:
+                resume = db.query(Resume).filter(Resume.id == uuid.UUID(resume_id)).first()
+                if resume:
+                    resume.status = "failed"
+                    resume.error_message = str(exc)
+                    db.commit()
+            _publish_sse_event(resume_id, "failed", {"error": str(exc)})
+            return
         raise self.retry(exc=exc, countdown=30)
 
 
@@ -137,7 +152,7 @@ def _gemini_vision_ocr(pdf_bytes: bytes) -> str:
     import fitz
 
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     all_text = []

@@ -126,17 +126,17 @@ export default function CampaignPage() {
 
         {/* Quick stats bar */}
         {stats && (
-          <div className="flex gap-6 mt-5 pt-5 border-t border-white/5">
+          <div className="grid grid-cols-5 gap-3.5 mt-6 pt-6 border-t border-white/5">
             {[
-              { label: "Total Uploaded", value: stats.total_resumes },
+              { label: "Total Uploaded", value: stats.total_resumes, color: "#94a3b8" },
               { label: "Processed", value: stats.total_processed, color: "#10b981" },
               { label: "In Queue", value: stats.total_pending, color: "#f59e0b" },
               { label: "Failed", value: stats.total_failed, color: "#ef4444" },
-              { label: "Avg Score", value: stats.avg_score ? `${stats.avg_score.toFixed(1)}/100` : "—", color: "#7c3aed" },
+              { label: "Avg Score", value: stats.avg_score ? `${stats.avg_score.toFixed(1)}/100` : "—", color: "#a78bfa" },
             ].map(s => (
-              <div key={s.label}>
-                <div className="text-[11px] text-white/30 mb-0.5">{s.label}</div>
-                <div className="text-lg font-bold" style={{ color: s.color || "#f1f5f9" }}>{s.value}</div>
+              <div key={s.label} className="bg-white/2 border border-white/5 rounded-xl px-4 py-3 group hover:border-white/10 transition-colors">
+                <div className="text-[11px] text-white/35 mb-1 font-medium">{s.label}</div>
+                <div className="text-xl font-bold tracking-tight" style={{ color: s.color }}>{s.value}</div>
               </div>
             ))}
           </div>

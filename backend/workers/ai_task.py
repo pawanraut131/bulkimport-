@@ -131,6 +131,7 @@ def process_candidate_ai(self, resume_id: str):
             resume.status = "done"
 
             db.commit()
+            original_filename = resume.original_filename
 
         log.info("candidate_saved", name=extraction.name, score=scoring.score)
 
@@ -142,7 +143,7 @@ def process_candidate_ai(self, resume_id: str):
                 "candidate_name": extraction.name,
                 "score": scoring.score,
                 "category": scoring.category,
-                "filename": resume.original_filename,
+                "filename": original_filename,
             },
         )
 
