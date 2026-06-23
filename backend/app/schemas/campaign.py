@@ -24,6 +24,7 @@ class CampaignStats(BaseModel):
     total_processed: int = 0
     total_failed: int = 0
     total_pending: int = 0
+    total_quota_exceeded: int = 0
     avg_score: Optional[float] = None
     strong_match: int = 0
     moderate_match: int = 0

@@ -128,11 +128,13 @@ async def _compute_stats(campaign_id: uuid.UUID, db: AsyncSession) -> CampaignSt
     )[:10]
 
     total = sum(status_map.values())
+    quota_exceeded = status_map.get("quota_exceeded", 0)
     return CampaignStats(
         total_resumes=total,
         total_processed=status_map.get("done", 0),
         total_failed=status_map.get("failed", 0),
         total_pending=status_map.get("pending", 0) + status_map.get("extracting", 0) + status_map.get("processing", 0),
+        total_quota_exceeded=quota_exceeded,
         avg_score=round(sum(avg_scores) / len(avg_scores), 2) if avg_scores else None,
         strong_match=cat_map.get("strong_match", 0),
         moderate_match=cat_map.get("moderate_match", 0),

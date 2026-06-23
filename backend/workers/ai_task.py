@@ -11,13 +11,14 @@ import structlog
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from celery import Task
+from google.api_core.exceptions import ResourceExhausted
 
 from workers.celery_app import celery_app
 from app.core.config import settings
 from app.models.resume import Resume
 from app.models.candidate import Candidate
 from app.models.campaign import Campaign
-from app.services.gemini import extract_candidate_info, score_candidate
+from app.services.gemini import extract_candidate_info, score_candidate, is_resume_content
 
 logger = structlog.get_logger()
 
@@ -32,6 +33,23 @@ def _publish_sse_event(resume_id: str, status: str, extra: dict = None):
     payload = {"resume_id": resume_id, "status": status, **(extra or {})}
     r.publish(f"resume:status:{resume_id}", json.dumps(payload))
     r.publish("resume:all_updates", json.dumps(payload))
+
+
+def _mark_quota_exceeded(resume_id: str, log):
+    """Immediately mark a resume as quota_exceeded — no retry."""
+    error_msg = (
+        "Gemini API daily quota reached (20 req/day on free tier). "
+        "This resume was not processed. Quota resets at midnight PT. "
+        "Upgrade to a paid Gemini API key to remove this limit."
+    )
+    log.warning("quota_exceeded_stopping", resume_id=resume_id)
+    with SyncSession() as db:
+        resume = db.query(Resume).filter(Resume.id == uuid.UUID(resume_id)).first()
+        if resume:
+            resume.status = "quota_exceeded"
+            resume.error_message = error_msg
+            db.commit()
+    _publish_sse_event(resume_id, "quota_exceeded", {"error": error_msg})
 
 
 class BaseTask(Task):
@@ -86,7 +104,23 @@ def process_candidate_ai(self, resume_id: str):
         # ── Step 1: Extract structured info ──────────────────────
         log.info("calling_gemini_extraction")
         extraction = extract_candidate_info(raw_text)
-        log.info("extraction_complete", name=extraction.name, skills_count=len(extraction.skills))
+        log.info("extraction_complete", name=extraction.name, skills_count=len(extraction.skills or []))
+
+        # ── Step 1b: Validate it's actually a resume ──────────────
+        if not is_resume_content(extraction):
+            log.warning("not_a_resume", name=extraction.name, skills=extraction.skills)
+            with SyncSession() as db:
+                resume = db.query(Resume).filter(Resume.id == uuid.UUID(resume_id)).first()
+                if resume:
+                    resume.status = "failed"
+                    resume.error_message = "File does not appear to be a resume (no candidate info found)"
+                    db.commit()
+            _publish_sse_event(
+                resume_id,
+                "failed",
+                {"error": "Not a resume — no candidate information could be extracted"},
+            )
+            return  # Stop here — do NOT retry, this is a data quality issue
 
         # ── Step 2: Score candidate ───────────────────────────────
         log.info("calling_gemini_scoring")
@@ -146,6 +180,10 @@ def process_candidate_ai(self, resume_id: str):
                 "filename": original_filename,
             },
         )
+
+    except ResourceExhausted:
+        # Daily quota hit — stop immediately, do NOT retry
+        _mark_quota_exceeded(resume_id, log)
 
     except Exception as exc:
         log.error("ai_processing_failed", error=str(exc))

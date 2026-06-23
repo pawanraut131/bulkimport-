@@ -106,3 +106,23 @@ async def get_candidate_by_resume(resume_id: uuid.UUID, db: AsyncSession = Depen
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not yet processed")
     return candidate
+
+
+@router.delete("/candidates/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_candidate(candidate_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    # Delete the underlying resume which cascade-deletes the candidate
+    result = await db.execute(select(Candidate).where(Candidate.id == candidate_id))
+    candidate = result.scalar_one_or_none()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+        
+    # Delete candidate first to avoid SQLAlchemy trying to set resume_id=NULL
+    await db.delete(candidate)
+    
+    resume_result = await db.execute(select(Resume).where(Resume.id == candidate.resume_id))
+    resume = resume_result.scalar_one_or_none()
+    if resume:
+        await db.delete(resume)
+        
+    await db.commit()
+    logger.info("candidate_deleted", candidate_id=str(candidate_id))

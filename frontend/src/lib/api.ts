@@ -25,6 +25,7 @@ export interface CampaignStats {
   total_processed: number;
   total_failed: number;
   total_pending: number;
+  total_quota_exceeded: number;
   avg_score?: number;
   strong_match: number;
   moderate_match: number;
@@ -120,6 +121,7 @@ export const getCandidates = (campaignId: string, params?: Record<string, string
 export const getCandidate = (id: string) => api.get<Candidate>(`/candidates/${id}`).then((r) => r.data);
 export const updateCandidateCategory = (id: string, category: string) =>
   api.put<Candidate>(`/candidates/${id}/category`, { category }).then((r) => r.data);
+export const deleteCandidate = (id: string) => api.delete(`/candidates/${id}`);
 
 // SSE
 export const SSE_URL = (campaignId: string) =>

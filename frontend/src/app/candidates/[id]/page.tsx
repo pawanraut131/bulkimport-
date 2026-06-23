@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getCandidate, updateCandidateCategory, Candidate } from "@/lib/api";
 import {
-  ArrowLeft, Github, Linkedin, Mail, Phone, Star,
+  ArrowLeft, Globe, Mail, Phone, Star,
   Briefcase, GraduationCap, Code2, Lightbulb,
   AlertTriangle, CheckCircle2, ChevronDown, ExternalLink
 } from "lucide-react";
@@ -59,7 +59,7 @@ export default function CandidateDetailPage() {
     : "#64748b";
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="page-wrapper">
       {/* Back */}
       <Link href={`/campaigns/${candidate.campaign_id}`}
         className="flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-6 transition-colors w-fit slide-up">
@@ -91,13 +91,13 @@ export default function CandidateDetailPage() {
                 {candidate.github_url && (
                   <a href={candidate.github_url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-[13px] text-white/40 hover:text-violet-300 transition-colors">
-                    <Github size={13} /> GitHub <ExternalLink size={10} />
+                    <Globe size={13} /> GitHub <ExternalLink size={10} />
                   </a>
                 )}
                 {candidate.linkedin_url && (
                   <a href={candidate.linkedin_url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-[13px] text-white/40 hover:text-cyan-300 transition-colors">
-                    <Linkedin size={13} /> LinkedIn <ExternalLink size={10} />
+                    <Globe size={13} /> LinkedIn <ExternalLink size={10} />
                   </a>
                 )}
               </div>

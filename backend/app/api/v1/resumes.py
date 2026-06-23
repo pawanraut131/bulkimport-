@@ -1,6 +1,7 @@
 import uuid
 import asyncio
 import json
+import hashlib
 from typing import List, AsyncGenerator
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from fastapi.responses import StreamingResponse
@@ -70,6 +71,26 @@ async def bulk_upload_resumes(
             rejected.append({"filename": file.filename, "reason": "Invalid PDF file"})
             continue
 
+        # Calculate hash for idempotency
+        file_hash = hashlib.sha256(content).hexdigest()
+
+        # Check if already processed or processing
+        existing_result = await db.execute(
+            select(Resume)
+            .where(Resume.campaign_id == campaign_id, Resume.file_hash == file_hash)
+            .order_by(Resume.uploaded_at.desc())
+        )
+        existing_resume = existing_result.scalars().first()
+        
+        if existing_resume:
+            if existing_resume.status == "done":
+                rejected.append({"filename": file.filename, "reason": "Duplicate file (already processed successfully)"})
+                continue
+            elif existing_resume.status in ("pending", "extracting", "processing"):
+                rejected.append({"filename": file.filename, "reason": "Duplicate file (currently in progress)"})
+                continue
+            # If status is failed or quota_exceeded, we allow re-upload (creates new Resume row)
+
         # Upload to MinIO
         resume_id = uuid.uuid4()
         object_key = f"campaigns/{campaign_id}/resumes/{resume_id}/{file.filename}"
@@ -81,6 +102,7 @@ async def bulk_upload_resumes(
             campaign_id=campaign_id,
             original_filename=file.filename,
             storage_path=object_key,
+            file_hash=file_hash,
             file_size_bytes=len(content),
             status="pending",
         )

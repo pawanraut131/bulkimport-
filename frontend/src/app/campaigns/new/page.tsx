@@ -49,7 +49,7 @@ export default function NewCampaignPage() {
   };
 
   return (
-    <div className="page-wrapper" style={{ paddingTop: "48px", paddingBottom: "64px" }}>
+    <div className="page-wrapper">
 
       {/* Back link */}
       <Link href="/campaigns"

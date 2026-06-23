@@ -65,6 +65,14 @@ export default function CampaignPage() {
     })();
   }, [id]); // intentionally only on id change
 
+  useEffect(() => {
+    // Re-fetch candidates when filters change, but skip the initial mount
+    // since the first useEffect handles the initial load
+    if (!loading) {
+      void fetchCandidates();
+    }
+  }, [fetchCandidates, loading]);
+
 
   const refresh = async () => {
     setRefreshing(true);
@@ -82,7 +90,7 @@ export default function CampaignPage() {
   if (!campaign) return <div className="p-8 text-white/40">Campaign not found</div>;
 
   return (
-    <div className="p-8 min-h-screen">
+    <div className="page-wrapper min-h-screen">
       {/* Header */}
       <div className="mb-8 slide-up">
         <Link href="/" className="flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-5 transition-colors w-fit">
@@ -124,18 +132,33 @@ export default function CampaignPage() {
           </div>
         )}
 
+        {/* Quota Exceeded Banner */}
+        {stats?.total_quota_exceeded > 0 && (
+          <div className="mt-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-start gap-3">
+            <div className="text-orange-400 mt-0.5">⚠️</div>
+            <div>
+              <h4 className="text-sm font-semibold text-orange-400">API Quota Reached</h4>
+              <p className="text-[13px] text-orange-400/80 mt-0.5">
+                {stats.total_quota_exceeded} resume(s) could not be processed because the Gemini free tier limit (20/day) was reached. 
+                They will automatically be retried tomorrow, or you can upgrade to a paid API key.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Quick stats bar */}
         {stats && (
-          <div className="grid grid-cols-5 gap-3.5 mt-6 pt-6 border-t border-white/5">
+          <div className="grid grid-cols-6 gap-4 mt-8 pt-8 border-t border-white/5">
             {[
               { label: "Total Uploaded", value: stats.total_resumes, color: "#94a3b8" },
               { label: "Processed", value: stats.total_processed, color: "#10b981" },
               { label: "In Queue", value: stats.total_pending, color: "#f59e0b" },
               { label: "Failed", value: stats.total_failed, color: "#ef4444" },
+              { label: "Quota Blocked", value: stats.total_quota_exceeded, color: "#f97316" },
               { label: "Avg Score", value: stats.avg_score ? `${stats.avg_score.toFixed(1)}/100` : "—", color: "#a78bfa" },
             ].map(s => (
-              <div key={s.label} className="bg-white/2 border border-white/5 rounded-xl px-4 py-3 group hover:border-white/10 transition-colors">
-                <div className="text-[11px] text-white/35 mb-1 font-medium">{s.label}</div>
+              <div key={s.label} className={clsx("bg-white/2 border border-white/5 rounded-xl px-4 py-3 group hover:border-white/10 transition-colors", s.value === 0 && s.label === "Quota Blocked" && "hidden")}>
+                <div className="text-[11px] text-white/35 mb-1.5 font-medium">{s.label}</div>
                 <div className="text-xl font-bold tracking-tight" style={{ color: s.color }}>{s.value}</div>
               </div>
             ))}
@@ -144,7 +167,7 @@ export default function CampaignPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 mb-6 rounded-xl w-fit slide-up"
+      <div className="flex gap-1 p-1 mb-8 rounded-xl w-fit slide-up"
         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", animationDelay: "0.05s" }}>
         {tabs.map(({ key, label, Icon, count }) => (
           <button key={key} onClick={() => setTab(key)}

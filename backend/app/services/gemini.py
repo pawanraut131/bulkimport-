@@ -1,7 +1,14 @@
 import json
 import structlog
 from typing import List
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    wait_fixed,
+    retry_if_exception_type,
+)
+from google.api_core.exceptions import ResourceExhausted
 import google.generativeai as genai
 from app.core.config import settings
 from app.schemas.candidate import ExtractionResult, ScoringResult
@@ -72,10 +79,25 @@ Category rules:
 Return ONLY valid JSON, no markdown, no explanation."""
 
 
+def _is_rate_limit(exc: BaseException) -> bool:
+    return isinstance(exc, ResourceExhausted)
+
+
+def _is_transient(exc: BaseException) -> bool:
+    return not isinstance(exc, ResourceExhausted)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(65),          # Gemini free-tier rate limit resets in ~60s
+    retry=retry_if_exception_type(ResourceExhausted),
+    reraise=True,
+)
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type(Exception),
+    reraise=True,
 )
 def extract_candidate_info(resume_text: str) -> ExtractionResult:
     """Call Gemini to extract structured candidate info from raw resume text."""
@@ -98,8 +120,15 @@ def extract_candidate_info(resume_text: str) -> ExtractionResult:
 
 @retry(
     stop=stop_after_attempt(3),
+    wait=wait_fixed(65),          # Gemini free-tier rate limit resets in ~60s
+    retry=retry_if_exception_type(ResourceExhausted),
+    reraise=True,
+)
+@retry(
+    stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type(Exception),
+    reraise=True,
 )
 def score_candidate(
     candidate_profile: dict,
@@ -138,3 +167,19 @@ def score_candidate(
         data["category"] = "rejected"
 
     return ScoringResult(**data)
+
+
+def is_resume_content(extraction: ExtractionResult) -> bool:
+    """
+    Heuristic check: does the extracted data look like a real resume?
+    Rejects documents that yield no identifiable candidate info.
+    """
+    has_name = bool(extraction.name and len(extraction.name.strip()) > 1)
+    has_skills = bool(extraction.skills and len(extraction.skills) > 0)
+    has_experience = bool(extraction.work_experience and len(extraction.work_experience) > 0)
+    has_education = bool(extraction.education and len(extraction.education) > 0)
+    has_email = bool(extraction.email)
+
+    # Must have at least 2 of these signals to be considered a real resume
+    signals = sum([has_name, has_skills, has_experience, has_education, has_email])
+    return signals >= 2

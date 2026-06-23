@@ -21,18 +21,18 @@ export default function DashboardPage() {
   const totalActive = campaigns.filter(c => c.status === "active").length;
 
   return (
-    <div className="page-wrapper-full" style={{ paddingTop: "48px" }}>
+    <div className="page-wrapper">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 slide-up">
+      <div className="flex items-center justify-between mb-10 slide-up">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <Sparkles size={16} className="text-violet-400" />
             <span className="text-[12px] font-semibold text-violet-400 uppercase tracking-widest">
               AI Recruitment Platform
             </span>
           </div>
           <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-white/40 text-sm mt-1">Manage your hiring campaigns and candidate pipeline</p>
+          <p className="text-white/40 text-sm mt-1.5">Manage your hiring campaigns and candidate pipeline</p>
         </div>
         <Link href="/campaigns/new" className="btn-primary">
           <Plus size={16} />
@@ -41,7 +41,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8 slide-up" style={{ animationDelay: "0.05s" }}>
+      <div className="grid grid-cols-4 gap-6 mb-12 slide-up" style={{ animationDelay: "0.05s" }}>
         {[
           { label: "Total Campaigns", value: totalCampaigns, icon: Briefcase, color: "#7c3aed" },
           { label: "Active Campaigns", value: totalActive, icon: TrendingUp, color: "#06b6d4" },
@@ -49,23 +49,25 @@ export default function DashboardPage() {
           { label: "Candidates Found", value: "—", icon: Users, color: "#10b981" },
         ].map((s) => (
           <div key={s.label} className="stat-card group" style={{ borderTop: `2px solid ${s.color}40` }}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[12px] text-white/40 font-medium group-hover:text-white/60 transition-colors">{s.label}</span>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 flex-shrink-0"
                 style={{ background: `${s.color}15`, border: `1px solid ${s.color}25` }}>
-                <s.icon size={14} style={{ color: s.color }} />
+                <s.icon size={20} style={{ color: s.color }} />
+              </div>
+              <div>
+                <span className="block text-[13px] text-white/40 font-medium group-hover:text-white/60 transition-colors mb-0.5">{s.label}</span>
+                <div className="text-2xl font-bold text-white tracking-tight leading-none">{s.value}</div>
               </div>
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Campaigns Grid */}
-      <div className="slide-up" style={{ animationDelay: "0.1s" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Campaigns</h2>
-          <Link href="/campaigns" className="text-[13px] text-violet-400 hover:text-violet-300 transition-colors">
+      <div className="slide-up mt-6" style={{ animationDelay: "0.1s" }}>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-xl font-bold text-white tracking-tight">Campaigns</h2>
+          <Link href="/campaigns" className="text-[13px] text-violet-400 hover:text-violet-300 transition-colors font-medium">
             View all →
           </Link>
         </div>
@@ -106,11 +108,10 @@ function CampaignCard({ campaign, index }: { campaign: Campaign; index: number }
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-              campaign.status === "active"
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
-                : "bg-white/5 text-white/45 border border-white/10"
-            }`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${campaign.status === "active"
+              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+              : "bg-white/5 text-white/45 border border-white/10"
+              }`}>
               <span className={`w-1 h-1 rounded-full ${campaign.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
               {campaign.status}
             </span>
@@ -159,17 +160,17 @@ function CampaignCard({ campaign, index }: { campaign: Campaign; index: number }
 
 function EmptyState() {
   return (
-    <div className="glass-card p-16 text-center">
-      <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+    <div className="border-2 border-dashed border-white/5 rounded-3xl p-24 text-center bg-gradient-to-b from-white/[0.02] to-transparent mt-4">
+      <div className="w-16 h-16 rounded-2xl mx-auto mb-8 mt-[12px] inline-flex items-center justify-center shadow-[0_0_40px_rgba(124,58,237,0.15)] transition-all hover:scale-105"
         style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
         <Briefcase size={28} className="text-violet-400" />
       </div>
-      <h3 className="text-lg font-semibold text-white mb-2">No campaigns yet</h3>
-      <p className="text-white/40 text-sm mb-6 max-w-sm mx-auto">
-        Create your first hiring campaign to start uploading and analyzing resumes with AI.
+      <h3 style={{ padding: "24px" }} className="text-xl font-bold text-white mb-3 tracking-tight ">No campaigns yet</h3>
+      <p className="text-white/40 text-[15px] mb-8 max-w-sm mx-auto leading-relaxed">
+        Create your first hiring campaign to start uploading and analyzing resumes with our AI recruitment engine.
       </p>
-      <Link href="/campaigns/new" className="btn-primary">
-        <Plus size={16} />
+      <Link href="/campaigns/new" className="btn-primary shadow-lg shadow-violet-500/20 px-8 py-3.5 text-[14px]">
+        <Plus size={18} />
         Create First Campaign
       </Link>
     </div>

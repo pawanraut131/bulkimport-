@@ -3,8 +3,10 @@
 import { Candidate } from "@/lib/api";
 import Link from "next/link";
 import { useState } from "react";
-import { Search, SlidersHorizontal, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronRight, Trash2 } from "lucide-react";
 import clsx from "clsx";
+import * as Dialog from "@radix-ui/react-dialog";
+import { toast } from "react-toastify";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -123,6 +125,8 @@ export default function CandidateTable({ candidates, filters, onFilterChange, on
 }
 
 function CandidateRow({ candidate: c, index, onRefresh }: { candidate: Candidate; index: number; onRefresh: () => void }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const cat = catStyle[c.category || ""] || null;
   const scoreColor = c.score
     ? c.score >= 75 ? "#10b981" : c.score >= 50 ? "#06b6d4" : c.score >= 25 ? "#f59e0b" : "#ef4444"
@@ -176,10 +180,58 @@ function CandidateRow({ candidate: c, index, onRefresh }: { candidate: Candidate
 
       {/* Actions */}
       <td className="px-5 py-4">
-        <Link href={`/candidates/${c.id}`}
-          className="flex items-center gap-1 text-[12px] text-violet-400 hover:text-violet-300 transition-colors">
-          View <ChevronRight size={13} />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={`/candidates/${c.id}`}
+            className="flex items-center gap-1 text-[12px] text-violet-400 hover:text-violet-300 transition-colors">
+            View <ChevronRight size={13} />
+          </Link>
+          <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <Dialog.Trigger asChild>
+              <button 
+                className="text-red-400/50 hover:text-red-400 transition-colors p-1"
+                title="Delete Candidate"
+              >
+                <Trash2 size={14} />
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 glass-card p-6 w-full max-w-sm rounded-2xl shadow-xl focus:outline-none">
+                <Dialog.Title className="text-lg font-bold text-white mb-2 tracking-tight">Delete Candidate</Dialog.Title>
+                <Dialog.Description className="text-[14px] text-white/50 mb-6 leading-relaxed">
+                  Are you sure you want to delete <strong className="text-white">{c.name || 'this candidate'}</strong>? This action cannot be undone and will remove their extracted data.
+                </Dialog.Description>
+                <div className="flex gap-3 justify-end mt-2">
+                  <Dialog.Close asChild>
+                    <button className="btn-secondary px-5 py-2 text-[13px] font-medium" disabled={isDeleting}>Cancel</button>
+                  </Dialog.Close>
+                  <button 
+                    className="flex items-center justify-center gap-2 px-5 py-2 text-[13px] font-semibold rounded-lg transition-all"
+                    style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}
+                    disabled={isDeleting}
+                    onClick={async () => {
+                      setIsDeleting(true);
+                      try {
+                        const { deleteCandidate } = await import('@/lib/api');
+                        await deleteCandidate(c.id);
+                        toast.success("Candidate deleted successfully");
+                        onRefresh();
+                      } catch (err) {
+                        console.error(err);
+                        toast.error("Failed to delete candidate");
+                      } finally {
+                        setIsDeleting(false);
+                        setIsModalOpen(false);
+                      }
+                    }}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        </div>
       </td>
     </tr>
   );

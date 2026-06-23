@@ -31,16 +31,16 @@ export default function CampaignsPage() {
   );
 
   return (
-    <div className="page-wrapper-full" style={{ paddingTop: "48px" }}>
+    <div className="page-wrapper">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 slide-up">
+      <div className="flex items-center justify-between mb-10 slide-up">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-violet-400" />
             <span className="text-[11px] font-semibold text-violet-400 uppercase tracking-widest">Recruitment</span>
           </div>
           <h1 className="text-3xl font-bold text-white">Campaigns</h1>
-          <p className="text-white/40 text-sm mt-1">{campaigns.length} active hiring campaign{campaigns.length !== 1 ? "s" : ""}</p>
+          <p className="text-white/40 text-sm mt-1.5">{campaigns.length} active hiring campaign{campaigns.length !== 1 ? "s" : ""}</p>
         </div>
         <Link href="/campaigns/new" className="btn-primary">
           <Plus size={16} />
@@ -49,7 +49,7 @@ export default function CampaignsPage() {
       </div>
 
       {/* Search */}
-      <div className="relative mb-6 max-w-md slide-up" style={{ animationDelay: "0.05s" }}>
+      <div className="relative mb-8 max-w-md slide-up" style={{ animationDelay: "0.05s" }}>
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
         <input
           className="input-field pl-10"
@@ -67,20 +67,21 @@ export default function CampaignsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="glass-card p-16 text-center">
-          <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+        <div className="border-2 border-dashed border-white/5 rounded-3xl p-24 text-center bg-gradient-to-b from-white/[0.02] to-transparent mt-4">
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-8 inline-flex items-center justify-center shadow-[0_0_40px_rgba(124,58,237,0.15)] transition-all hover:scale-105"
             style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
-            <Briefcase size={24} className="text-violet-400" />
+            <Briefcase size={28} className="text-violet-400" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">
-            {search ? "No campaigns match your search" : "No campaigns yet"}
-          </h3>
-          <p className="text-white/40 text-sm mb-6">
-            {search ? "Try a different keyword" : "Create your first campaign to get started"}
+          <h3 className="text-xl font-bold text-white mb-3 tracking-tight">No campaigns found</h3>
+          <p className="text-white/40 text-[15px] mb-8 max-w-sm mx-auto leading-relaxed">
+            {search 
+              ? `No campaigns match your search for "${search}".`
+              : "Create your first hiring campaign to start uploading and analyzing resumes."}
           </p>
           {!search && (
-            <Link href="/campaigns/new" className="btn-primary">
-              <Plus size={16} /> Create Campaign
+            <Link href="/campaigns/new" className="btn-primary shadow-lg shadow-violet-500/20 px-8 py-3.5 text-[14px]">
+              <Plus size={18} />
+              Create Campaign
             </Link>
           )}
         </div>
