@@ -43,6 +43,13 @@ class Candidate(Base):
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     category: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
+    # Recruiter workflow fields
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pipeline_stage: Mapped[str | None] = mapped_column(
+        String(30), nullable=True
+        # values: screened | phone_call | technical | offer | hired | rejected_manual
+    )
+
     # Raw text
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
