@@ -242,6 +242,45 @@ export default function CandidateDetailPage() {
         )}
       </div>
 
+      {/* Score Breakdown Card */}
+      {candidate.score_breakdown && (
+        <div className="glass-card p-6 mb-5 slide-up" style={{ animationDelay: "0.08s" }}>
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest mb-5"
+            style={{ color: "rgba(245,240,232,0.28)", fontFamily: "var(--font-mono)" }}>
+            Score Breakdown — How the AI scored this candidate
+          </h3>
+          <div className="space-y-3.5">
+            {([
+              { key: "skills_match",          label: "Skills Match",          max: 40, color: "#10b981" },
+              { key: "experience_match",       label: "Experience Match",      max: 30, color: "#06b6d4" },
+              { key: "project_relevance",      label: "Project Relevance",     max: 15, color: "#a78bfa" },
+              { key: "education_bonus",        label: "Education",             max: 10, color: "#f59e0b" },
+              { key: "communication_quality",  label: "Resume Quality",        max: 5,  color: "#64748b" },
+            ] as const).map(({ key, label, max, color }) => {
+              const val = candidate.score_breakdown![key] ?? 0;
+              const pct = Math.min((val / max) * 100, 100);
+              return (
+                <div key={key} className="flex items-center gap-4">
+                  <div className="w-36 flex-shrink-0 text-[12px] font-medium"
+                    style={{ color: "rgba(245,240,232,0.55)" }}>
+                    {label}
+                  </div>
+                  <div className="flex-1 h-1.5 rounded-full overflow-hidden"
+                    style={{ background: "rgba(255,248,235,0.06)" }}>
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  <div className="w-14 text-right text-[12px] font-bold tabular-nums flex-shrink-0"
+                    style={{ color, fontFamily: "var(--font-mono)" }}>
+                    {val}<span className="text-[10px] font-normal opacity-40">/{max}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 3-column grid */}
       <div className="grid grid-cols-3 gap-5 mb-5">
         {/* Strengths */}

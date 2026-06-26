@@ -76,6 +76,13 @@ export interface Candidate {
   missing_skills: string[];
   recommendation?: string;
   score?: number;
+  score_breakdown?: {
+    skills_match: number;
+    experience_match: number;
+    project_relevance: number;
+    education_bonus: number;
+    communication_quality: number;
+  };
   category?: string;
   notes?: string;
   pipeline_stage?: string;
@@ -157,6 +164,12 @@ export const updateCandidateNotes = (id: string, notes: string) =>
 export const updateCandidatePipeline = (id: string, stage: string) =>
   api.patch<Candidate>(`/candidates/${id}/pipeline`, { stage }).then((r) => r.data);
 export const deleteCandidate = (id: string) => api.delete(`/candidates/${id}`);
+
+export const bulkUpdatePipeline = (campaignId: string, candidate_ids: string[], stage: string) =>
+  api.patch<{ updated: number }>(`/campaigns/${campaignId}/candidates/bulk-pipeline`, { candidate_ids, stage }).then(r => r.data);
+
+export const bulkDeleteCandidates = (campaignId: string, candidate_ids: string[]) =>
+  api.delete<{ deleted: number }>(`/campaigns/${campaignId}/candidates/bulk`, { data: { candidate_ids } }).then(r => r.data);
 
 export const exportCandidatesCsv = (
   campaignId: string,

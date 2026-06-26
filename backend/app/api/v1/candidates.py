@@ -16,6 +16,7 @@ from app.schemas.candidate import (
     CandidateListItem, CandidateDetail,
     CandidateCategoryUpdate, CandidateNotesUpdate, CandidatePipelineUpdate,
 )
+from pydantic import BaseModel
 
 logger = structlog.get_logger()
 router = APIRouter(tags=["candidates"])
@@ -24,6 +25,14 @@ VALID_CATEGORIES = {"strong_match", "moderate_match", "weak_match", "rejected"}
 VALID_PIPELINE_STAGES = {
     "screened", "phone_call", "technical", "offer", "hired", "rejected_manual"
 }
+
+class BulkPipelineUpdate(BaseModel):
+    candidate_ids: List[uuid.UUID]
+    stage: str
+
+class BulkDeleteRequest(BaseModel):
+    candidate_ids: List[uuid.UUID]
+
 
 # ── Helper ────────────────────────────────────────────────────
 
@@ -239,6 +248,65 @@ async def get_candidate_by_resume(resume_id: uuid.UUID, db: AsyncSession = Depen
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not yet processed")
     return candidate
+
+
+# ── Bulk Actions ──────────────────────────────────────────────
+
+@router.patch("/campaigns/{campaign_id}/candidates/bulk-pipeline")
+async def bulk_update_pipeline(
+    campaign_id: uuid.UUID,
+    payload: BulkPipelineUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Move multiple candidates to the same pipeline stage in one request."""
+    if payload.stage not in VALID_PIPELINE_STAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid stage. Must be one of: {', '.join(sorted(VALID_PIPELINE_STAGES))}",
+        )
+    result = await db.execute(
+        select(Candidate).where(
+            Candidate.campaign_id == campaign_id,
+            Candidate.id.in_(payload.candidate_ids),
+        )
+    )
+    candidates = result.scalars().all()
+    for c in candidates:
+        c.pipeline_stage = payload.stage
+    await db.commit()
+    logger.info("bulk_pipeline_updated", count=len(candidates), stage=payload.stage)
+    return {"updated": len(candidates)}
+
+
+@router.delete("/campaigns/{campaign_id}/candidates/bulk", status_code=status.HTTP_200_OK)
+async def bulk_delete_candidates(
+    campaign_id: uuid.UUID,
+    payload: BulkDeleteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete multiple candidates (and their resumes) in one request."""
+    result = await db.execute(
+        select(Candidate).where(
+            Candidate.campaign_id == campaign_id,
+            Candidate.id.in_(payload.candidate_ids),
+        )
+    )
+    candidates = result.scalars().all()
+    resume_ids = [c.resume_id for c in candidates]
+
+    for c in candidates:
+        await db.delete(c)
+
+    if resume_ids:
+        resume_result = await db.execute(
+            select(Resume).where(Resume.id.in_(resume_ids))
+        )
+        for r in resume_result.scalars().all():
+            await db.delete(r)
+
+    await db.commit()
+    logger.info("bulk_candidates_deleted", count=len(candidates))
+    return {"deleted": len(candidates)}
 
 
 @router.delete("/candidates/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)

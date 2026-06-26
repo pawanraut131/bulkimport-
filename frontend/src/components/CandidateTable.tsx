@@ -1,9 +1,9 @@
 "use client";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Candidate, exportCandidatesCsv, updateCandidatePipeline } from "@/lib/api";
+import { Candidate, exportCandidatesCsv, updateCandidatePipeline, bulkUpdatePipeline, bulkDeleteCandidates } from "@/lib/api";
 import Link from "next/link";
 import { useState } from "react";
-import { Search, SlidersHorizontal, ChevronRight, Trash2, Download, ArrowUpRight } from "lucide-react";
+import { Search, SlidersHorizontal, Trash2, Download, ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
 import * as Dialog from "@radix-ui/react-dialog";
 import { toast } from "react-toastify";
@@ -53,6 +53,42 @@ interface Props {
 export default function CandidateTable({ campaignId, candidates, filters, onFilterChange, onRefresh }: Props) {
   const [showFilters, setShowFilters] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStage, setBulkStage] = useState("");
+  const [bulkActing, setBulkActing] = useState(false);
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const allSelected = candidates.length > 0 && selectedIds.size === candidates.length;
+  const toggleAll = () =>
+    setSelectedIds(allSelected ? new Set() : new Set(candidates.map(c => c.id)));
+
+  const handleBulkPipeline = async (stage: string) => {
+    if (!stage || selectedIds.size === 0) return;
+    setBulkActing(true);
+    try {
+      const { updated } = await bulkUpdatePipeline(campaignId, Array.from(selectedIds), stage);
+      toast.success(`Moved ${updated} candidate${updated !== 1 ? 's' : ''} to ${PIPELINES.find(p => p.value === stage)?.label || stage}`);
+      setSelectedIds(new Set());
+      setBulkStage("");
+      onRefresh();
+    } catch { toast.error("Bulk update failed"); }
+    finally { setBulkActing(false); }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} selected candidate${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setBulkActing(true);
+    try {
+      const { deleted } = await bulkDeleteCandidates(campaignId, Array.from(selectedIds));
+      toast.success(`Deleted ${deleted} candidate${deleted !== 1 ? 's' : ''}`);
+      setSelectedIds(new Set());
+      onRefresh();
+    } catch { toast.error("Bulk delete failed"); }
+    finally { setBulkActing(false); }
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -175,6 +211,55 @@ export default function CandidateTable({ campaignId, candidates, filters, onFilt
         </div>
       )}
 
+      {/* ── Floating bulk action bar ─────────────────── */}
+      {selectedIds.size > 0 && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl slide-up"
+          style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.22)" }}
+        >
+          <span className="text-[12.5px] font-semibold" style={{ color: "#fbbf24" }}>
+            {selectedIds.size} selected
+          </span>
+          <span style={{ color: "rgba(217,119,6,0.3)" }}>|</span>
+          <span className="text-[12px]" style={{ color: "rgba(245,240,232,0.45)" }}>Move to stage:</span>
+          <select
+            value={bulkStage}
+            onChange={e => setBulkStage(e.target.value)}
+            className="text-[12px] px-2 py-1.5 rounded-lg font-medium"
+            style={{ background: "rgba(255,248,235,0.06)", color: "#f5f0e8", border: "1px solid rgba(255,248,235,0.12)", outline: "none" }}
+          >
+            <option value="" style={{ background: "#131210", color: "#f5f0e8" }}>Choose…</option>
+            {PIPELINES.filter(p => p.value !== "").map(p => (
+              <option key={p.value} value={p.value} style={{ background: "#131210", color: "#f5f0e8" }}>{p.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => handleBulkPipeline(bulkStage)}
+            disabled={!bulkStage || bulkActing}
+            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-40"
+            style={{ background: "rgba(217,119,6,0.15)", color: "#d97706", border: "1px solid rgba(217,119,6,0.28)" }}
+          >
+            {bulkActing ? "Updating…" : "Apply"}
+          </button>
+          <div className="ml-auto" />
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkActing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-40"
+            style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.22)" }}
+          >
+            <Trash2 size={12} /> Delete selected
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-[11px] px-2 py-1 rounded"
+            style={{ color: "rgba(245,240,232,0.35)" }}
+          >
+            ✕ Clear
+          </button>
+        </div>
+      )}
+
       {/* ── Table ─────────────────────────────────────── */}
       {candidates.length === 0 ? (
         <div
@@ -188,12 +273,20 @@ export default function CandidateTable({ campaignId, candidates, filters, onFilt
         </div>
       ) : (
         <div
-          className="rounded-xl overflow-hidden"
+          className="rounded-xl overflow-x-auto"
           style={{ border: "1px solid rgba(255,248,235,0.07)", background: "#131210" }}
         >
-          <table className="w-full">
+          <table className="w-full min-w-[900px]">
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,248,235,0.06)" }}>
+                <th className="pl-4 pr-2 py-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    className="w-3.5 h-3.5 accent-amber-500 cursor-pointer"
+                  />
+                </th>
                 {["Candidate", "Skills", "Experience", "Score", "Category", "Pipeline Stage", ""].map(h => (
                   <th
                     key={h}
@@ -207,7 +300,8 @@ export default function CandidateTable({ campaignId, candidates, filters, onFilt
             </thead>
             <tbody>
               {candidates.map((c, i) => (
-                <CandidateRow key={c.id} candidate={c} index={i} onRefresh={onRefresh} />
+                <CandidateRow key={c.id} candidate={c} index={i} onRefresh={onRefresh}
+                  selected={selectedIds.has(c.id)} onToggleSelect={() => toggleSelect(c.id)} />
               ))}
             </tbody>
           </table>
@@ -221,7 +315,13 @@ export default function CandidateTable({ campaignId, candidates, filters, onFilt
   );
 }
 
-function CandidateRow({ candidate: c, index, onRefresh }: { candidate: Candidate; index: number; onRefresh: () => void }) {
+function CandidateRow({ candidate: c, index, onRefresh, selected, onToggleSelect }: {
+  candidate: Candidate;
+  index: number;
+  onRefresh: () => void;
+  selected: boolean;
+  onToggleSelect: () => void;
+}) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPipelineMenu, setShowPipelineMenu] = useState(false);
@@ -240,8 +340,18 @@ function CandidateRow({ candidate: c, index, onRefresh }: { candidate: Candidate
       style={{
         borderBottom: "1px solid rgba(255,248,235,0.04)",
         animationDelay: `${0.02 * index}s`,
+        background: selected ? "rgba(217,119,6,0.04)" : undefined,
       }}
     >
+      {/* Checkbox */}
+      <td className="pl-4 pr-2 py-3.5">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          className="w-3.5 h-3.5 accent-amber-500 cursor-pointer"
+        />
+      </td>
       {/* Name + email */}
       <td className="px-5 py-3.5">
         <div className="font-medium text-[13.5px] text-[#f5f0e8] leading-tight">{c.name || "Unknown"}</div>
@@ -343,7 +453,7 @@ function CandidateRow({ candidate: c, index, onRefresh }: { candidate: Candidate
       </td>
 
       {/* Actions */}
-      <td className="px-5 py-3.5">
+      <td className="px-5 py-3.5 whitespace-nowrap">
         <div className="flex items-center gap-2.5">
           <Link
             href={`/candidates/${c.id}`}

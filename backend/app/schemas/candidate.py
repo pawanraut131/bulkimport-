@@ -45,6 +45,7 @@ class CandidateDetail(BaseModel):
     category: Optional[str]
     notes: Optional[str] = None
     pipeline_stage: Optional[str] = None
+    score_breakdown: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
 
@@ -91,6 +92,7 @@ class ExtractionResult(BaseModel):
 
 class ScoringResult(BaseModel):
     score: float
+    score_breakdown: Optional[dict] = None  # {skills_match, experience_match, project_relevance, education_bonus, communication_quality}
     category: str  # strong_match | moderate_match | weak_match | rejected
     summary: str
     strengths: List[str] = []
